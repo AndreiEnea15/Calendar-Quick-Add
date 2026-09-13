@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Quick-Add</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3457d5">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Quick-Add">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Libre+Franklin:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper: #f3f4f2;
+    --paper-raise: #ffffff;
+    --ink: #1c1f26;
+    --muted: #666e7d;
+    --line: #d9dbdd;
+    --accent: #3457d5;
+    --accent-ink: #ffffff;
+    --accent-soft: #e5eafc;
+    --bell: #b3402c;
+    --bell-soft: #fbe9e4;
+    --shadow: rgba(28, 31, 38, 0.08);
+    --focus: #3457d5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #14161b;
+      --paper-raise: #1b1e25;
+      --ink: #edeef2;
+      --muted: #9298a6;
+      --line: #2c2f38;
+      --accent: #8aa0ff;
+      --accent-ink: #10131c;
+      --accent-soft: #232a45;
+      --bell: #e28a76;
+      --bell-soft: #3a241f;
+      --shadow: rgba(0, 0, 0, 0.35);
+      --focus: #8aa0ff;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper: #14161b;
+    --paper-raise: #1b1e25;
+    --ink: #edeef2;
+    --muted: #9298a6;
+    --line: #2c2f38;
+    --accent: #8aa0ff;
+    --accent-ink: #10131c;
+    --accent-soft: #232a45;
+    --bell: #e28a76;
+    --bell-soft: #3a241f;
+    --shadow: rgba(0, 0, 0, 0.35);
+    --focus: #8aa0ff;
+  }
+
+  [hidden]{ display:none !important; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px,
+      var(--paper);
+    color:var(--ink);
+    font-family:'Libre Franklin', system-ui, sans-serif;
+    padding-block: 40px;
+  }
+  .wrap{
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+  }
+  header{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+  }
+  h1{
+    margin:0;
+    font-size: clamp(26px, 5vw, 34px);
+    font-weight:700;
+    text-wrap:balance;
+  }
+  .sub{
+    margin:0;
+    color:var(--muted);
+    font-size:15px;
+    max-width:56ch;
+    line-height:1.5;
+  }
+
+  .card{
+    background:var(--paper-raise);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow: 0 1px 3px var(--shadow);
+    padding: 22px;
+  }
+  .card-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 10px;
+  }
+
+  .paste-row{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  #pasteText{
+    font-family:'Libre Franklin', system-ui, sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    width:100%;
+    min-height:96px;
+    resize:vertical;
+    line-height:1.5;
+  }
+  #parseBtn{
+    align-self:flex-start;
+  }
+  .parse-state{
+    font-size:12.5px;
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--accent);
+  }
+  .parse-state[data-state="warn"]{ color:var(--bell); }
+
+  .divider{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+  }
+  .divider::before, .divider::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  input[type="text"], input[type="date"], input[type="time"], textarea{
+    font-family:'Libre Franklin', system-ui, sans-serif;
+    font-size:15px;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    width:100%;
+  }
+  textarea{resize:vertical; min-height:64px; line-height:1.5;}
+  input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible{
+    outline:2px solid var(--focus);
+    outline-offset:2px;
+  }
+  .row2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+  }
+  @media (max-width: 480px){
+    .row2{grid-template-columns: 1fr;}
+  }
+  .checkline{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .checkline label{
+    text-transform:none;
+    letter-spacing:0;
+    font-size:14px;
+    color:var(--ink);
+    font-family:'Libre Franklin', system-ui, sans-serif;
+  }
+  .checkline input{width:16px; height:16px;}
+  .hint{
+    font-size:12px;
+    color:var(--muted);
+    margin:0;
+  }
+
+  /* ticket preview */
+  .ticket{
+    display:grid;
+    grid-template-columns: auto 1fr;
+    gap:0;
+    background:var(--paper-raise);
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+  .ticket-date{
+    background:var(--accent-soft);
+    color:var(--ink);
+    padding:20px 18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    border-right:1px dashed var(--line);
+    min-width:96px;
+  }
+  .ticket-date .dow{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);}
+  .ticket-date .day{font-size:32px; font-weight:600; line-height:1.1;}
+  .ticket-date .mon{font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);}
+  .ticket-body{
+    padding:18px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .ticket-course{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .ticket-title{
+    font-size:19px;
+    font-weight:700;
+    text-wrap:balance;
+    word-break:break-word;
+  }
+  .ticket-time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--accent);
+  }
+  .ticket-meta{
+    font-size:13.5px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .ticket-reminder{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--bell);
+    background:var(--bell-soft);
+    border-radius:7px;
+    padding:6px 10px;
+    width:fit-content;
+    margin-top:4px;
+  }
+
+  .actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+  }
+  .btn-primary, .btn-bell{
+    font-family:'Libre Franklin', system-ui, sans-serif;
+    font-weight:600;
+    font-size:15px;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:none;
+    border-radius:9px;
+    padding:12px 20px;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+  }
+  .btn-bell{
+    background:var(--bell);
+  }
+  .btn-primary[aria-disabled="true"], .btn-bell[aria-disabled="true"]{
+    opacity:0.45;
+    pointer-events:none;
+  }
+  .btn-secondary{
+    font-family:'Libre Franklin', system-ui, sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:11px 16px;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .btn-secondary:hover{ border-color:var(--accent); }
+  .copy-state{
+    font-size:12.5px;
+    color:var(--accent);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  details.ics{
+    background:var(--paper-raise);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding: 16px 20px;
+  }
+  details.ics summary{
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.04em;
+    color:var(--muted);
+  }
+  details.ics summary:hover{color:var(--ink);}
+  .ics-body{
+    margin-top:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  #icsText{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    background:var(--paper);
+    min-height:150px;
+    white-space:pre;
+  }
+
+  footer{
+    color:var(--muted);
+    font-size:12px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Deadline → Calendar</span>
+    <h1>Calendar Quick-Add</h1>
+    <p class="sub">Paste an assignment notice, or fill in the fields by hand, and get a link that drops the deadline straight into Google Calendar — plus a reminder one day before.</p>
+  </header>
+
+  <div class="card">
+    <p class="card-label">Paste event text</p>
+    <div class="paste-row">
+      <textarea id="pasteText" placeholder="e.g.&#10;Homework 1: Sections 1.1-1.3 and part of 1.4: due Sunday, 20 September, 11:59 PM&#10;Course event&#10;SC/MATH 1019 B - Discrete Math for Computer Science (Fall 2026-2027)"></textarea>
+      <div class="actions">
+        <button id="parseBtn" class="btn-secondary" type="button">Fill in fields below ↓</button>
+        <span class="parse-state" id="parseState"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">or edit directly</div>
+
+  <div class="card">
+    <form id="deadlineForm" autocomplete="off">
+      <div class="field">
+        <label for="course">Course</label>
+        <input type="text" id="course" placeholder="e.g. SC/MATH 1019 B - Discrete Math for Computer Science">
+      </div>
+      <div class="field">
+        <label for="dTitle">Assignment</label>
+        <input type="text" id="dTitle" placeholder="e.g. Homework 1: Sections 1.1-1.3">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="dueDate">Due date</label>
+          <input type="date" id="dueDate">
+        </div>
+        <div class="field">
+          <label for="dueTime">Due time</label>
+          <input type="time" id="dueTime" value="23:59">
+        </div>
+      </div>
+      <p class="hint">Times are added as your calendar's local time — no timezone conversion.</p>
+      <div class="field">
+        <label for="dNotes">Notes (optional)</label>
+        <textarea id="dNotes" placeholder="e.g. submit via Gradescope"></textarea>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="dReminder">
+        <label for="dReminder">Add a reminder event one day before (all day)</label>
+      </div>
+      <p class="hint">Added as a separate all-day event, so it can't clash with a specific time.</p>
+    </form>
+  </div>
+
+  <div class="ticket" id="ticket" aria-live="polite">
+    <div class="ticket-date">
+      <span class="dow" id="tDow">SUN</span>
+      <span class="day" id="tDay">20</span>
+      <span class="mon" id="tMon">SEP</span>
+    </div>
+    <div class="ticket-body">
+      <span class="ticket-course" id="tCourse"></span>
+      <span class="ticket-title" id="tTitle">Untitled assignment</span>
+      <span class="ticket-time" id="tTime">Due --:-- --</span>
+      <span class="ticket-meta" id="tDesc"></span>
+      <span class="ticket-reminder" id="tReminder" hidden>🔔 <span id="tReminderText"></span></span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a id="gcalBtn" class="btn-primary" target="_blank" rel="noopener">Add to Google Calendar ↗</a>
+    <a id="gcalReminderBtn" class="btn-bell" target="_blank" rel="noopener" hidden>🔔 Add reminder ↗</a>
+    <button id="copyLinkBtn" class="btn-secondary" type="button">Copy link</button>
+    <button id="installBtn" class="btn-secondary" type="button" hidden>Install app ⤓</button>
+    <span class="copy-state" id="copyState"></span>
+  </div>
+
+  <details class="ics">
+    <summary>Use with Outlook, Apple Calendar or another app (.ics)</summary>
+    <div class="ics-body">
+      <p class="hint">Download (or copy) this as an <code>.ics</code> file and open it to add the event to any calendar app. It already carries a built-in 1-day-before popup reminder — no second event needed.</p>
+      <textarea id="icsText" readonly rows="10"></textarea>
+      <div class="actions">
+        <a id="downloadIcsBtn" class="btn-secondary" download>Download .ics ⤓</a>
+        <button id="copyIcsBtn" class="btn-secondary" type="button">Copy .ics text</button>
+        <span class="copy-state" id="copyIcsState"></span>
+      </div>
+      <p class="hint" id="downloadHint">After downloading, open the file (double-click it) and your calendar app will offer to add the event.</p>
+      <p class="hint" id="downloadUnavailableNote" hidden>Direct download isn't available inside Claude's preview — use "Copy .ics text" above, or open this page's downloaded/self-hosted copy, where the download button works.</p>
+    </div>
+  </details>
+
+  <footer>Generates standard Google Calendar quick-add links — nothing is created until you click through and save it.<br>Install it as an app for offline access to filling in and previewing an event (adding it still needs a connection). On iPhone/iPad: Share → Add to Home Screen.</footer>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function todayLocal(){
+    const d = new Date();
+    return {y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate()};
+  }
+  function toISODate({y,m,d}){ return `${y}-${pad(m)}-${pad(d)}`; }
+  function parseISODate(str){
+    const [y,m,d] = str.split('-').map(Number);
+    return {y,m,d};
+  }
+  function isValidDate({y,m,d}){
+    const dt = new Date(Date.UTC(y, m-1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m-1 && dt.getUTCDate() === d;
+  }
+  function addDays({y,m,d}, days){
+    const utc = Date.UTC(y, m-1, d) + days*86400000;
+    const dt = new Date(utc);
+    return {y: dt.getUTCFullYear(), m: dt.getUTCMonth()+1, d: dt.getUTCDate()};
+  }
+  function fmtCompact({y,m,d}){ return `${y}${pad(m)}${pad(d)}`; }
+  const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const DOWFULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const MONFULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function dowOf({y,m,d}){ return DOW[new Date(Date.UTC(y,m-1,d)).getUTCDay()]; }
+  function dowFullOf({y,m,d}){ return DOWFULL[new Date(Date.UTC(y,m-1,d)).getUTCDay()]; }
+  function fmtTime12(hhmm){
+    let [h,m] = hhmm.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(h===0) h = 12;
+    return `${h}:${pad(m)} ${ap}`;
+  }
+
+  function escIcs(str){
+    return (str||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  }
+  function foldIcsLine(line){
+    if(line.length <= 75) return line;
+    let out = '';
+    let rest = line;
+    let first = true;
+    while(rest.length > 0){
+      const chunk = first ? rest.slice(0,75) : rest.slice(0,74);
+      out += (first ? '' : '\r\n ') + chunk;
+      rest = rest.slice(chunk.length);
+      first = false;
+    }
+    return out;
+  }
+  function icsStamp(){
+    const now = new Date();
+    return `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+  }
+
+
+  // ---------------- free-text parsing ----------------
+  const MONTH_NAMES = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const MONTH_ABBR = ['jan','feb','mar','apr','may','jun','jul','aug','sep','sept','oct','nov','dec'];
+  function monthIndexFromWord(w){
+    w = w.toLowerCase().replace(/\.$/,'');
+    let i = MONTH_NAMES.indexOf(w);
+    if(i !== -1) return i;
+    i = MONTH_ABBR.indexOf(w);
+    if(i !== -1) return i === 12 ? 8 : i; // 'sept' maps to index 12 in abbr list -> September(8)
+    return -1;
+  }
+  const MONTH_WORD = '(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)';
+
+  function findDatePieces(text){
+    // ISO yyyy-mm-dd
+    let m = text.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+    if(m) return {y:+m[1], mo:+m[2]-1, day:+m[3]};
+    // day Month [year]  e.g. "20 September, 2026" / "20 September"
+    m = text.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+${MONTH_WORD}\\.?,?\\s*(\\d{4})?`, 'i'));
+    if(m){
+      const mo = monthIndexFromWord(m[2]);
+      if(mo !== -1) return {y: m[3] ? +m[3] : null, mo, day: +m[1]};
+    }
+    // Month day[, year]  e.g. "September 20, 2026" / "Sep 20"
+    m = text.match(new RegExp(`\\b${MONTH_WORD}\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s*(\\d{4})?`, 'i'));
+    if(m){
+      const mo = monthIndexFromWord(m[1]);
+      if(mo !== -1) return {y: m[3] ? +m[3] : null, mo, day: +m[2]};
+    }
+    // slashed m/d/yyyy
+    m = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    if(m) return {y:+m[3], mo:+m[1]-1, day:+m[2]};
+    return null;
+  }
+  function findTimePieces(text){
+    const m = text.match(/\b(\d{1,2}):(\d{2})\s*([AaPp]\.?[Mm]\.?)\b/);
+    if(!m) return null;
+    let h = +m[1];
+    const min = +m[2];
+    const ap = m[3].toLowerCase().replace(/\./g,'');
+    if(ap === 'pm' && h !== 12) h += 12;
+    if(ap === 'am' && h === 12) h = 0;
+    return {h, min};
+  }
+  function parsePastedText(raw){
+    const text = raw.replace(/\r/g,'');
+    const lines = text.split('\n').map(s=>s.trim()).filter(Boolean);
+    const result = {course:'', title:'', dueDate:'', dueTime:'', notes:''};
+    if(!lines.length) return {result, ok:false};
+
+    const dateBits = findDatePieces(text);
+    const timeBits = findTimePieces(text);
+
+    if(dateBits){
+      let year = dateBits.y;
+      if(!year){
+        const now = todayLocal();
+        year = now.y;
+        // if the date (this year) already passed by more than ~2 months, assume next year
+        const candidate = new Date(Date.UTC(year, dateBits.mo, dateBits.day));
+        const today = new Date(Date.UTC(now.y, now.m-1, now.d));
+        if((today - candidate) > 60*86400000) year += 1;
+      }
+      result.dueDate = toISODate({y:year, m:dateBits.mo+1, d:dateBits.day});
+    }
+    if(timeBits){
+      result.dueTime = `${pad(timeBits.h)}:${pad(timeBits.min)}`;
+    }
+
+    // title: text before ": due" / " due " on the first line that contains one
+    const dueLineIdx = lines.findIndex(l => /\bdue\b/i.test(l));
+    if(dueLineIdx !== -1){
+      const l = lines[dueLineIdx];
+      const cut = l.search(/:\s*due\b|\bdue\b/i);
+      result.title = (cut > 0 ? l.slice(0, cut) : l).replace(/[:\s]+$/,'').trim();
+    } else {
+      result.title = lines[0];
+    }
+
+    // course: a line containing a course-code-looking token, e.g. "SC/MATH 1019", "CS 101"
+    const courseLineIdx = lines.findIndex(l => /\b[A-Z]{2,6}(?:\/[A-Z]{2,6})?\s?\d{3,4}[A-Z]?\b/.test(l));
+    if(courseLineIdx !== -1){
+      result.course = lines[courseLineIdx];
+    }
+
+    // notes: any remaining lines that aren't the title/course/date/time/boilerplate
+    const boilerplate = /^course event$/i;
+    const usedIdx = new Set([dueLineIdx, courseLineIdx].filter(i => i !== -1));
+    const leftover = lines.filter((l, i) => {
+      if(usedIdx.has(i)) return false;
+      if(boilerplate.test(l)) return false;
+      if(findDatePieces(l) && findTimePieces(l)) return false; // pure date/time line
+      return true;
+    });
+    result.notes = leftover.join(' ');
+
+    const ok = !!(result.title && result.dueDate);
+    return {result, ok};
+  }
+
+  $('parseBtn').addEventListener('click', () => {
+    const raw = $('pasteText').value;
+    const stateEl = $('parseState');
+    if(!raw.trim()){
+      stateEl.dataset.state = 'warn';
+      stateEl.textContent = 'Paste some text first';
+      return;
+    }
+    const {result, ok} = parsePastedText(raw);
+    if(result.title) $('dTitle').value = result.title;
+    if(result.course) $('course').value = result.course;
+    if(result.dueDate) $('dueDate').value = result.dueDate;
+    if(result.dueTime) $('dueTime').value = result.dueTime;
+    if(result.notes) $('dNotes').value = result.notes;
+    render();
+    if(ok){
+      stateEl.dataset.state = '';
+      stateEl.textContent = 'Filled in below — check the date and time';
+    } else {
+      stateEl.dataset.state = 'warn';
+      stateEl.textContent = "Couldn't find everything — check the fields below";
+    }
+    setTimeout(()=>{ stateEl.textContent=''; }, 4000);
+  });
+
+  // ---------------- deadline logic ----------------
+  function readDeadline(){
+    return {
+      course: $('course').value.trim(),
+      title: $('dTitle').value.trim() || 'Untitled assignment',
+      dueDate: $('dueDate').value,
+      dueTime: $('dueTime').value || '23:59',
+      notes: $('dNotes').value.trim(),
+      reminder: $('dReminder').checked
+    };
+  }
+  function eventTitleForDeadline(f){
+    return f.course ? `${f.title} due (${f.course})` : `${f.title} due`;
+  }
+  function blockDatesParam(dayObj, timeStr){
+    const [hh, mm] = timeStr.split(':').map(Number);
+    // the block ENDS exactly at the given time and starts a little before it,
+    // so a time like 11:59 PM never spills into the next calendar day.
+    const dayStartMs = Date.UTC(dayObj.y, dayObj.m-1, dayObj.d, 0, 0, 0);
+    const endMs = Date.UTC(dayObj.y, dayObj.m-1, dayObj.d, hh, mm, 0);
+    let startMs = endMs - 30*60000;
+    if(startMs < dayStartMs) startMs = dayStartMs; // clamp for times very close to midnight
+    const s = new Date(startMs), e = new Date(endMs);
+    const fmt = (dt) => `${dt.getUTCFullYear()}${pad(dt.getUTCMonth()+1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}${pad(dt.getUTCSeconds())}`;
+    return `${fmt(s)}/${fmt(e)}`;
+  }
+  function buildDeadlineDatesParam(f){
+    if(!f.dueDate) return null;
+    return blockDatesParam(parseISODate(f.dueDate), f.dueTime);
+  }
+  function allDayDatesParam(dayObj){
+    // Google Calendar's all-day date range end is exclusive, so a single
+    // all-day event spanning just `dayObj` is dayObj/dayObj+1.
+    return `${fmtCompact(dayObj)}/${fmtCompact(addDays(dayObj, 1))}`;
+  }
+  function buildReminderDatesParam(f){
+    if(!f.dueDate) return null;
+    const remDay = addDays(parseISODate(f.dueDate), -1);
+    return allDayDatesParam(remDay);
+  }
+  function buildDeadlineGcalUrl(f){
+    const dates = buildDeadlineDatesParam(f);
+    if(!dates) return null;
+    const p = new URLSearchParams();
+    p.set('action','TEMPLATE');
+    p.set('text', eventTitleForDeadline(f));
+    p.set('dates', dates);
+    const details = [f.course, f.notes].filter(Boolean).join('\n');
+    if(details) p.set('details', details);
+    return 'https://calendar.google.com/calendar/render?' + p.toString();
+  }
+  function buildReminderGcalUrl(f){
+    const dates = buildReminderDatesParam(f);
+    if(!dates) return null;
+    const p = new URLSearchParams();
+    p.set('action','TEMPLATE');
+    p.set('text', `Reminder: ${f.title} due tomorrow`);
+    p.set('dates', dates);
+    const details = [f.course, f.notes, `Due ${fmtTime12(f.dueTime)} tomorrow.`].filter(Boolean).join('\n');
+    p.set('details', details);
+    return 'https://calendar.google.com/calendar/render?' + p.toString();
+  }
+  function buildDeadlineIcs(f){
+    const dates = buildDeadlineDatesParam(f);
+    const [dtStart, dtEnd] = (dates||'').split('/');
+    const stamp = icsStamp();
+    const uid = `${stamp}-${Math.random().toString(36).slice(2,10)}@calendar-quick-add`;
+    const details = [f.course, f.notes].filter(Boolean).join('\\n');
+    const lines = [
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Calendar Quick-Add//EN','CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:${escIcs(eventTitleForDeadline(f))}`
+    ];
+    if(details) lines.push(`DESCRIPTION:${details}`);
+    if(f.reminder && f.dueDate){
+      lines.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Reminder','TRIGGER:-P1D','END:VALARM');
+    }
+    lines.push('END:VEVENT','END:VCALENDAR');
+    return lines.map(foldIcsLine).join('\r\n');
+  }
+  function updateDeadlinePreview(f){
+    const due = parseISODate(f.dueDate || toISODate(todayLocal()));
+    $('tDow').textContent = dowOf(due);
+    $('tDay').textContent = due.d;
+    $('tMon').textContent = MON[due.m-1];
+    $('tCourse').textContent = f.course;
+    $('tCourse').style.display = f.course ? '' : 'none';
+    $('tTitle').textContent = f.title;
+    $('tTime').textContent = `Due ${fmtTime12(f.dueTime)}`;
+    $('tDesc').textContent = f.notes || '';
+    $('tDesc').style.display = f.notes ? '' : 'none';
+    const rem = $('tReminder');
+    if(f.reminder && f.dueDate){
+      const remDay = addDays(due, -1);
+      $('tReminderText').textContent = `Reminder ${dowFullOf(remDay)}, ${MONFULL[remDay.m-1]} ${remDay.d} (all day)`;
+      rem.hidden = false;
+    } else {
+      rem.hidden = true;
+    }
+  }
+
+  function render(){
+    const f = readDeadline();
+    updateDeadlinePreview(f);
+    const gcalBtn = $('gcalBtn'), gcalReminderBtn = $('gcalReminderBtn');
+    const dateValid = !f.dueDate || isValidDate(parseISODate(f.dueDate));
+    const url = dateValid ? buildDeadlineGcalUrl(f) : null;
+    if(url){ gcalBtn.href = url; gcalBtn.removeAttribute('aria-disabled'); }
+    else { gcalBtn.removeAttribute('href'); gcalBtn.setAttribute('aria-disabled','true'); }
+    if(f.reminder){
+      gcalReminderBtn.href = buildReminderGcalUrl(f);
+      gcalReminderBtn.hidden = false;
+    } else {
+      gcalReminderBtn.hidden = true;
+    }
+    const icsContent = buildDeadlineIcs(f);
+    $('icsText').value = icsContent;
+    updateDownloadLink(icsContent, f);
+    $('copyState').textContent = '';
+    $('copyIcsState').textContent = '';
+  }
+
+  // Claude's artifact viewer never grants pages real download permission (a
+  // sandbox restriction), so a plain <a download> link is inert there — hide
+  // it and point to the working alternatives instead. Outside that viewer
+  // (this page downloaded, self-hosted, or installed as the PWA) the same
+  // link downloads the .ics file normally.
+  const inArtifactViewer = /(^|\.)claude\.ai$/.test(location.hostname);
+  if(inArtifactViewer){
+    $('downloadIcsBtn').hidden = true;
+    $('downloadHint').hidden = true;
+    $('downloadUnavailableNote').hidden = false;
+  }
+
+  let lastIcsBlobUrl = null;
+  function slugify(str){
+    return (str || 'event').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50) || 'event';
+  }
+  function updateDownloadLink(icsContent, f){
+    if(inArtifactViewer) return;
+    const link = $('downloadIcsBtn');
+    try{
+      if(lastIcsBlobUrl) URL.revokeObjectURL(lastIcsBlobUrl);
+      const blob = new Blob([icsContent], {type: 'text/calendar;charset=utf-8'});
+      lastIcsBlobUrl = URL.createObjectURL(blob);
+      link.href = lastIcsBlobUrl;
+      link.download = `${slugify(f.title)}-${f.dueDate || 'due'}.ics`;
+    }catch(e){
+      // Blob/object URLs unavailable — leave the copy button as the fallback
+      link.removeAttribute('href');
+    }
+  }
+
+  $('deadlineForm').addEventListener('input', render);
+
+  async function copyText(text, targetId){
+    const el = $(targetId);
+    try{
+      await navigator.clipboard.writeText(text);
+      el.textContent = 'Copied';
+    }catch(e){
+      el.textContent = 'Select the text and copy manually';
+    }
+    setTimeout(()=>{ el.textContent=''; }, 2500);
+  }
+
+  $('copyLinkBtn').addEventListener('click', () => {
+    const href = $('gcalBtn').getAttribute('href');
+    if(href) copyText(href, 'copyState');
+  });
+  $('copyIcsBtn').addEventListener('click', () => {
+    copyText($('icsText').value, 'copyIcsState');
+  });
+
+  // ---------------- PWA: service worker (offline app-shell caching) ----------------
+  try{
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      });
+    }
+  }catch(e){}
+
+  // ---------------- PWA: install button ----------------
+  let deferredInstallPrompt = null;
+  const installBtn = $('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if(!deferredInstallPrompt) return;
+    installBtn.hidden = true;
+    deferredInstallPrompt.prompt();
+    try{ await deferredInstallPrompt.userChoice; }catch(e){}
+    deferredInstallPrompt = null;
+  });
+  window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
+
+  render();
+})();
+</script>
+</body>
+</html>
